@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <!-- Firebase App (core) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <!-- Firebase Auth (if you use it) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <!-- Optional: Analytics -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-analytics-compat.js"></script>
+    
+    <script>
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBy9GDhhKPoeUBWdBH2Q4mYv4yI2MB3_E0",
+      authDomain: "nfc-kedai-kuning.firebaseapp.com",
+      projectId: "nfc-kedai-kuning",
+      storageBucket: "nfc-kedai-kuning.firebasestorage.app",
+      messagingSenderId: "851920514046",
+      appId: "1:851920514046:web:244a89c766231635b26eaf",
+      measurementId: "G-0G9EJQR8SF"
+    };
+    // Init
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Scan Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="public/assets/styles.css">
+</head>
+<body class="min-h-screen text-slate-100">
+    <header class="app-shell px-6 py-10 text-center">
+        <p class="text-slate-500 text-sm uppercase tracking-wide">Customer self-service</p>
+        <h1 class="text-3xl font-bold text-slate-100">Scan your NFC card</h1>
+        <p class="text-slate-400 text-sm mt-2">Check repair status instantly, powered by mock data (and later Firestore).</p>
+        <a href="index.html" class="text-xs text-sky-400 font-semibold hover:underline inline-block mt-3">Return to Hub</a>
+    </header>
+
+    <main class="app-shell px-6 pb-12">
+        <div class="glass-panel-soft rounded-3xl p-8 flex flex-col items-center space-y-6 relative">
+            <input id="customerSwipe" type="text" aria-hidden="true" autocomplete="off" class="absolute opacity-0 pointer-events-none" tabindex="-1">
+            <div class="w-32 h-32 rounded-full bg-slate-900/60 flex items-center justify-center text-5xl">📡</div>
+            <p class="text-slate-400 text-center max-w-md">Hold your NFC card near the reader (mobile phone or kiosk). The UID will display here and the latest order status appears below.</p>
+            <div class="w-full bg-slate-900 text-white rounded-2xl p-4 font-mono text-center">
+                UID: <span id="customerUid" class="text-lime-300">-- awaiting scan --</span>
+            </div>
+            <!-- Customer Info Box -->
+            <div id="infoBoxArea" class="w-full flex flex-col items-center gap-2" style="min-height:40px;">
+                <!-- Populated/hidden by script -->
+            </div>
+            <div class="w-full border border-slate-700 rounded-2xl p-6 bg-slate-900/60">
+                <p class="text-sm text-slate-400 uppercase tracking-wide">Latest update</p>
+                <h2 id="statusHeading" class="text-xl font-bold text-slate-100 mt-1">No record yet</h2>
+                <p id="statusCopy" class="text-slate-400 text-sm mt-2">Once scanned, customer-friendly status, ETA, and notes will appear here.</p>
+            </div>
+            <div class="w-full border border-slate-700 rounded-2xl p-6 bg-slate-900/40">
+                <p class="text-sm text-slate-400 uppercase tracking-wide">Payment summary</p>
+                <div class="grid grid-cols-3 gap-4 text-sm mt-3">
+                    <div>
+                        <p class="text-slate-500">Quoted</p>
+                        <p id="paymentQuoted" class="font-semibold text-slate-100">$0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-500">Paid</p>
+                        <p id="paymentDeposit" class="font-semibold text-slate-100">$0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-500">Balance</p>
+                        <p id="paymentDue" class="font-semibold text-rose-400">$0.00</p>
+                    </div>
+                </div>
+                <p id="paymentNote" class="text-xs text-slate-500 mt-4">Swipe card to view secured balance details.</p>
+            </div>
+            <p class="text-xs text-slate-500 text-center">Tip: The kiosk keeps a hidden text box focused so swipes feel seamless.</p>
+        </div>
+    </main>
+    <script>
+        const customerSwipe = document.getElementById('customerSwipe');
+        const customerUid = document.getElementById('customerUid');
+        const statusHeading = document.getElementById('statusHeading');
+        const statusCopy = document.getElementById('statusCopy');
+        const infoBoxArea = document.getElementById('infoBoxArea');
+
+        const paymentQuoted = document.getElementById('paymentQuoted');
+        const paymentDeposit = document.getElementById('paymentDeposit');
+        const paymentDue = document.getElementById('paymentDue');
+        const paymentNote = document.getElementById('paymentNote');
+
+        const fallbackStatus = [
+            { title: 'Checked-In', body: 'Technician reviewing intake photos. Expect diagnostic within 2 hours.' },
+            { title: 'In Progress', body: 'Parts installed, running QA tests before final polish.' },
+            { title: 'Ready for Pickup', body: 'Device sealed and sanitized. Present your NFC card at the counter.' },
+            { title: 'Completed', body: 'Order closed. Receipt emailed to the address on file.' }
+        ];
+
+        function formatCurrency(value) {
+            return (Number(value) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        }
+
+        function ensureSwipeFocus() {
+            customerSwipe.focus();
+        }
+
+        function parseTrackData(raw) {
+            if(!raw) return null;
+            const match = raw.match(/;([0-9A-Za-z]+)\?/);
+            if(match) return match[1];
+            const cleaned = raw.replace(/[^0-9A-Za-z]/g, '').trim();
+            return cleaned || null;
+        }
+
+        function buildStatusCopy(record) {
+            const parts = [];
+            if(record.issue) parts.push(`Issue: ${record.issue}`);
+            if(record.technicianNotes) parts.push(`Notes: ${record.technicianNotes}`);
+            if(parts.length === 0) parts.push('Technician will update notes soon.');
+            return parts.join(' • ');
+        }
+
+        function renderInfoBox(record, isError, errorMsg) {
+            infoBoxArea.innerHTML = '';
+            if(isError && errorMsg) {
+                infoBoxArea.innerHTML = `<div class="w-full flex items-center justify-center gap-2 bg-rose-600/15 border border-rose-500 rounded-lg p-2 text-rose-300 text-base font-semibold animate-pulse">
+                    <span class="mr-1 text-2xl">\u{1F622}</span><span>${errorMsg}</span>
+                </div>`;
+                return;
+            }
+            if(record && (record.customerName || record.model)) {
+                infoBoxArea.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl text-blue-300">\u{1F464}</span>
+                        <span class="text-lg font-bold text-slate-100">${record.customerName ? record.customerName : ''}</span>
+                    </div>
+                    <div class="text-sm text-slate-300 italic">${record.model ? record.model : ''}</div>
+                `;
+            } else {
+                infoBoxArea.innerHTML = '';
+            }
+        }
+
+        function resetInfoBox() {
+            infoBoxArea.innerHTML = '';
+        }
+
+        function renderRecord(record) {
+            renderInfoBox(record, false, null);
+            const due = Math.max((record.costEstimate || 0) - (record.amountPaid || 0), 0);
+            statusHeading.textContent = record.status || 'In Queue';
+            statusCopy.textContent = buildStatusCopy(record);
+            paymentQuoted.textContent = formatCurrency(record.costEstimate || 0);
+            paymentDeposit.textContent = formatCurrency(record.amountPaid || 0);
+            paymentDue.textContent = formatCurrency(due);
+            paymentNote.textContent = due === 0 ? 'All settled. Thanks for your payment!' : `Balance of ${formatCurrency(due)} due at pickup.`;
+        }
+
+        function renderFallback(uid) {
+            renderInfoBox(null, true, `No ticket found for card UID ${uid}`);
+            statusHeading.textContent = 'Not Found';
+            statusCopy.textContent = 'Please see a technician for assistance.';
+            paymentQuoted.textContent = '$0.00';
+            paymentDeposit.textContent = '$0.00';
+            paymentDue.textContent = '$0.00';
+            paymentNote.textContent = '';
+        }
+
+        async function updateCustomerView(uid) {
+            customerUid.textContent = uid;
+            // Query Firestore for ticket
+            try {
+                const doc = await db.collection('repairs').doc(uid).get();
+                if(doc.exists) {
+                    renderRecord(doc.data());
+                } else {
+                    renderFallback(uid);
+                }
+            } catch (e) {
+                renderFallback(uid);
+            }
+        }
+
+        function handleCustomerSwipe(value) {
+            const parsed = parseTrackData(value);
+            if(parsed) {
+                updateCustomerView(parsed);
+                customerSwipe.value = '';
+            }
+        }
+
+        customerSwipe.addEventListener('keydown', (event) => {
+            if(event.key === 'Enter') {
+                event.preventDefault();
+                handleCustomerSwipe(customerSwipe.value);
+            }
+        });
+
+        ['blur'].forEach(evt => {
+            customerSwipe.addEventListener(evt, () => setTimeout(ensureSwipeFocus, 50));
+        });
+
+        window.addEventListener('load', ensureSwipeFocus);
+        document.addEventListener('click', ensureSwipeFocus);
+    </script>
+</body>
+</html>
+

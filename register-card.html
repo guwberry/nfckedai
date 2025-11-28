@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register NFC Card</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="public/assets/styles.css">
+    <!-- Firebase App (core) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyBy9GDhhKPoeUBWdBH2Q4mYv4yI2MB3_E0",
+          authDomain: "nfc-kedai-kuning.firebaseapp.com",
+          projectId: "nfc-kedai-kuning",
+          storageBucket: "nfc-kedai-kuning.firebasestorage.app",
+          messagingSenderId: "851920514046",
+          appId: "1:851920514046:web:244a89c766231635b26eaf",
+          measurementId: "G-0G9EJQR8SF"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+</head>
+<body class="min-h-screen text-slate-100">
+    <header class="bg-transparent border-b border-slate-800/60 shadow-sm">
+        <div class="app-shell px-6 py-6 flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500">Phase 4 · Technician Check-In</p>
+                <h1 class="text-2xl font-bold">Register NFC Card</h1>
+            </div>
+            <a href="index.html" class="text-sm text-sky-400 font-semibold hover:underline">Back to Hub</a>
+        </div>
+    </header>
+
+    <main class="app-shell px-6 py-8">
+        <div class="glass-panel-soft p-6">
+            <p class="text-slate-400 text-sm mb-6">Simulated form inspired by the workflow simulator in the blueprint.</p>
+            <form class="grid gap-4 md:grid-cols-2" id="registerForm" autocomplete="off">
+                <div class="md:col-span-2">
+                    <label class="text-sm font-semibold text-slate-300">Scan NFC Tag</label>
+                    <div class="mt-1 flex items-center bg-slate-900/40 border border-slate-700 rounded-lg px-4 py-3">
+                        <span class="text-2xl mr-3">📡</span>
+                        <div>
+                            <p class="font-mono text-sm">UID: <span id="uidDisplay" class="text-slate-100">-- awaiting scan --</span></p>
+                            <p class="text-xs text-slate-500">Use Web NFC or focus the UID field below and swipe the magnetic card reader.</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300" for="customerName">Customer Name</label>
+                    <input id="customerName" type="text" class="mt-1 w-full field-input" placeholder="Jane Doe">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300" for="model">Device Model</label>
+                    <input id="model" type="text" class="mt-1 w-full field-input" placeholder="iPhone 15 Pro">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-sm font-semibold text-slate-300" for="issue">Issue Description</label>
+                    <textarea id="issue" rows="4" class="mt-1 w-full field-input" placeholder="Screen cracked, camera malfunction..."></textarea>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300" for="cost">Cost Estimate</label>
+                    <input id="cost" type="number" class="mt-1 w-full field-input" placeholder="250">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300" for="amountPaid">Deposit / Paid Upfront (Optional)</label>
+                    <input id="amountPaid" type="number" class="mt-1 w-full field-input" placeholder="0">
+                    <p class="text-xs text-slate-500 mt-1">Leave blank if no partial payment collected.</p>
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-slate-300" for="status">Status</label>
+                    <select id="status" class="mt-1 w-full field-input">
+                        <option>Checked-In</option>
+                        <option>In Progress</option>
+                        <option>Ready for Pickup</option>
+                        <option>Completed</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-sm font-semibold text-slate-300" for="uidInput">UID Input (Magstripe)</label>
+                    <input id="uidInput" type="text" class="mt-1 w-full field-input font-mono tracking-wide" placeholder="Click here, then swipe card…" autocomplete="off">
+                    <p class="text-xs text-slate-500 mt-2">Focus this field before swiping. The card reader types the UID and presses Enter automatically.</p>
+                </div>
+                <div class="md:col-span-2">
+                    <div class="bg-slate-900/40 border border-slate-700 rounded-xl p-4">
+                        <p class="text-xs uppercase tracking-wide text-slate-500">Payment Summary</p>
+                        <div class="flex flex-wrap gap-4 text-sm mt-2">
+                            <div>
+                                <p class="text-slate-500">Quoted</p>
+                                <p id="summaryQuoted" class="font-semibold text-slate-100">$0.00</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-500">Deposit</p>
+                                <p id="summaryDeposit" class="font-semibold text-slate-100">$0.00</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-500">Balance Due</p>
+                                <p id="summaryDue" class="font-semibold text-rose-400">$0.00</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="registerStatus" class="md:col-span-2 hidden bg-emerald-900/40 border border-emerald-600/60 text-emerald-300 text-sm rounded-lg px-4 py-3">
+                    UID captured. Ticket ready for Firestore submit.
+                </div>
+            </form>
+        </div>
+    </main>
+    <script>
+        const uidInput = document.getElementById('uidInput');
+        const uidDisplay = document.getElementById('uidDisplay');
+        const registerStatus = document.getElementById('registerStatus');
+        const costInput = document.getElementById('cost');
+        const paidInput = document.getElementById('amountPaid');
+        const customerNameInput = document.getElementById('customerName');
+        const modelInput = document.getElementById('model');
+        const issueInput = document.getElementById('issue');
+        const statusSelect = document.getElementById('status');
+        const summaryQuoted = document.getElementById('summaryQuoted');
+        const summaryDeposit = document.getElementById('summaryDeposit');
+        const summaryDue = document.getElementById('summaryDue');
+
+        function formatCurrency(value) {
+            const num = Number(value) || 0;
+            return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        }
+
+        function updatePaymentSummary() {
+            const quoted = Number(costInput.value) || 0;
+            const paid = costInput.value === '' && paidInput.value === '' ? 0 : (Number(paidInput.value) || 0);
+            const due = Math.max(quoted - paid, 0);
+            summaryQuoted.textContent = formatCurrency(quoted);
+            summaryDeposit.textContent = formatCurrency(paid);
+            summaryDue.textContent = formatCurrency(due);
+        }
+
+        function parseTrackData(raw) {
+            if(!raw) return null;
+            const match = raw.match(/;([0-9A-Za-z]+)\?/);
+            if(match) return match[1];
+            const cleaned = raw.replace(/[^0-9A-Za-z]/g, '').trim();
+            return cleaned || null;
+        }
+
+        function collectFormData(uid) {
+            const cost = Number(costInput.value) || 0;
+            const deposit = paidInput.value === '' ? 0 : (Number(paidInput.value) || 0);
+            return {
+                nfcId: uid,
+                customerName: customerNameInput.value || 'Walk-in Customer',
+                model: modelInput.value || 'Unknown Device',
+                issue: issueInput.value || 'N/A',
+                status: statusSelect.value,
+                costEstimate: cost,
+                amountPaid: deposit,
+                balanceDue: Math.max(cost - deposit, 0)
+            };
+        }
+
+        async function handleSwipeInput(value) {
+            const parsed = parseTrackData(value);
+            if(parsed) {
+                uidInput.value = parsed;
+                uidDisplay.textContent = parsed;
+                registerStatus.classList.remove('hidden');
+                registerStatus.textContent = `Saving to server ...`;
+                const record = collectFormData(parsed);
+                try {
+                    await db.collection('repairs').doc(parsed).set(record, {merge:true});
+                    registerStatus.textContent = `UID ${parsed} captured. Ticket stored in Firestore.`;
+                } catch (e) {
+                    registerStatus.textContent = `❌ Error saving to Firestore: ${e.message}`;
+                }
+            }
+        }
+
+        uidInput.addEventListener('focus', () => {
+            uidInput.value = '';
+            registerStatus.classList.add('hidden');
+        });
+
+        uidInput.addEventListener('keydown', (event) => {
+            if(event.key === 'Enter') {
+                event.preventDefault();
+                handleSwipeInput(uidInput.value);
+            }
+        });
+
+        [costInput, paidInput].forEach(field => {
+            field.addEventListener('input', updatePaymentSummary);
+        });
+        updatePaymentSummary();
+    </script>
+</body>
+</html>
+

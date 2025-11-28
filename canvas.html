@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Repair Log System | Interactive Blueprint</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="public/assets/styles.css">
+    <!-- Chosen Palette: Warm Neutrals with Tech Blue/Green Accents -->
+    <!-- Application Structure Plan: The application is structured as an interactive Project Blueprint. It uses a Tab-based navigation system to guide the user through the logical flow of the project: 1. Architecture (High-level overview), 2. Specifications (Hardware/Software breakdown), 3. Data Schema (Database structure exploration), 4. Workflow Simulator (Interactive demo of the logic), and 5. Roadmap (Timeline and effort visualization). This structure was chosen to break down the technical density of the plan into digestible, interactive modules. -->
+    <!-- Visualization & Content Choices: 
+         1. Architecture: Interactive Block Diagram (HTML/CSS) -> Goal: Visualize connections -> Click blocks to reveal details.
+         2. Specs: Comparison Cards -> Goal: Clear checklist -> Filter interaction.
+         3. Data: Interactive Schema Viewer -> Goal: Understand Firestore document structure -> Hover to see types/descriptions.
+         4. Workflow: Step-by-Step Simulator -> Goal: Demonstrate the UX described in Phase 4 -> JS-driven state machine.
+         5. Roadmap: Horizontal Bar Chart (Chart.js) -> Goal: Visualize estimated complexity/effort per phase -> Tooltip interaction.
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
+            background: radial-gradient(circle at top, #111827 0, #020617 55%, #020617 100%);
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        /* Custom Scrollbar for inner content */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        .tab-btn {
+            color: #94a3b8;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .tab-btn.active {
+            border-bottom: 2px solid #38bdf8;
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        .node-box {
+            transition: all 0.3s ease;
+        }
+        .node-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .flow-arrow::after {
+            content: '→';
+            font-size: 24px;
+            color: #94a3b8;
+            margin: 0 10px;
+        }
+        @media (max-width: 768px) {
+            .flow-arrow::after {
+                content: '↓';
+                display: block;
+                margin: 10px auto;
+                text-align: center;
+            }
+        }
+        
+        .simulation-step {
+            display: none;
+        }
+        .simulation-step.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen text-slate-100">
+
+    <!-- Header -->
+    <header class="bg-transparent border-b border-slate-800/60 shadow-sm sticky top-0 z-50">
+        <div class="app-shell px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-2">🛠️</span>
+                    <h1 class="text-xl font-bold text-slate-100 tracking-tight">NFC Repair Log System <span class="text-slate-400 font-light hidden sm:inline">| Architecture Blueprint</span></h1>
+                </div>
+                <div class="text-sm text-slate-400 font-medium">Based on Phase 1-5 Plan</div>
+            </div>
+        </div>
+        
+        <!-- Navigation Tabs -->
+        <nav class="bg-slate-900/60 border-t border-b border-slate-800 overflow-x-auto">
+            <div class="app-shell px-4 sm:px-6 lg:px-8">
+                <div class="flex space-x-8" id="nav-tabs">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow app-shell px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Tab 1: System Architecture -->
+        <section id="view-architecture" class="tab-content block">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-slate-100 mb-2">Phase 1: System Architecture Overview</h2>
+                <p class="text-slate-400 max-w-3xl">The build now ships as a small suite: Login → Hub → task-specific screens (register card, customer kiosk, orders board, support tools). Interaction still relies on a unique UID captured via NFC or a magstripe reader that emulates keyboard typing before syncing to the Firestore backend.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Interactive Diagram Area -->
+                <div class="lg:col-span-2 glass-panel-soft p-6">
+                    <h3 class="text-lg font-semibold text-slate-100 mb-6 flex items-center"><span class="mr-2">🔌</span> System Flow Diagram</h3>
+                    
+                    <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 py-8">
+                        <div class="node-box w-full md:w-1/3 bg-slate-900/40 border border-slate-700 rounded-lg p-4 text-center cursor-pointer hover:bg-slate-900/70" onclick="showArchDetail('hardware')">
+                            <div class="text-4xl mb-2">🏷️</div>
+                            <div class="font-bold text-slate-100">1. NFC Hardware</div>
+                            <div class="text-xs text-slate-400 mt-1">Tags & Reader</div>
+                        </div>
+                        
+                        <div class="flow-arrow"></div>
+                        
+                        <div class="node-box w-full md:w-1/3 bg-slate-900/40 border border-slate-700 rounded-lg p-4 text-center cursor-pointer hover:bg-slate-900/70" onclick="showArchDetail('frontend')">
+                            <div class="text-4xl mb-2">💻</div>
+                            <div class="font-bold text-slate-100">2. Web App</div>
+                            <div class="text-xs text-slate-400 mt-1">Technician Interface</div>
+                        </div>
+                        
+                        <div class="flow-arrow"></div>
+                        
+                        <div class="node-box w-full md:w-1/3 bg-slate-900/40 border border-slate-700 rounded-lg p-4 text-center cursor-pointer hover:bg-slate-900/70" onclick="showArchDetail('database')">
+                            <div class="text-4xl mb-2">☁️</div>
+                            <div class="font-bold text-slate-100">3. Cloud DB</div>
+                            <div class="text-xs text-slate-400 mt-1">Google Firestore</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-amber-400/10 rounded border border-amber-400/40">
+                        <h4 class="font-bold text-amber-200 text-sm uppercase mb-1">Critical Concept: The NFC Key</h4>
+                        <p class="text-sm text-amber-100">The NFC card acts solely as a <strong>Permanent Unique Key (UID)</strong>. No data is written to the card itself. The system reads the UID and queries the database for matching records.</p>
+                    </div>
+                </div>
+
+                <!-- Details Panel -->
+                <div class="glass-panel-soft p-6 flex flex-col justify-center">
+                    <div id="arch-detail-content">
+                        <div class="text-center text-slate-400">
+                            <p class="text-5xl mb-4">👆</p>
+                            <p>Click a component in the diagram to view detailed specifications for the current multi-page implementation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 2: Hardware & Software Specs -->
+        <section id="view-specs" class="tab-content hidden">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-slate-100 mb-2">Phase 2: Hardware & Software Requirements</h2>
+                <p class="text-slate-400">Essential checklists for deploying the system. The hardware setup offers two options (Mobile vs Desktop) depending on operational needs.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Hardware Card -->
+                <div class="glass-panel-soft overflow-hidden">
+                    <div class="bg-slate-900/40 px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-100">Hardware Checklist</h3>
+                        <span class="pill-subtle">Physical</span>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 bg-green-500/20 rounded-full p-2 mr-4">
+                                📡
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100">NFC Reader (Required)</h4>
+                                <p class="text-sm text-slate-400 mt-1">Must read UID of tags.</p>
+                                <ul class="text-sm text-slate-400 mt-2 list-disc list-inside bg-slate-900/40 p-3 rounded">
+                                    <li><strong>Option A (Simple):</strong> NFC-enabled Mobile Phone (Android/iOS) running the Web App via Web NFC API.</li>
+                                    <li><strong>Option B (Desktop):</strong> USB NFC Reader (e.g., ACR122U) connected to computer.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 bg-green-500/20 rounded-full p-2 mr-4">
+                                💳
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100">NFC Tags (Required)</h4>
+                                <p class="text-sm text-slate-400 mt-1">Passive tags (NTAG213/215). One card per repair job. Durable format recommended.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 bg-green-500/20 rounded-full p-2 mr-4">
+                                ⌨️
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100">Magstripe Reader (Optional)</h4>
+                                <p class="text-sm text-slate-400 mt-1">Keyboard-wedge readers simplify UID capture during technician intake and at the customer kiosk. Device auto-types the track data and presses Enter.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Software Card -->
+                <div class="glass-panel-soft overflow-hidden">
+                    <div class="bg-slate-900/40 px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-100">Software Checklist</h3>
+                        <span class="pill-subtle">Digital</span>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 bg-blue-500/20 rounded-full p-2 mr-4">
+                                🗄️
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100">Database</h4>
+                                <p class="text-sm text-slate-400 mt-1"><strong>Google Cloud Firestore.</strong></p>
+                                <p class="text-sm text-slate-500 mt-1">Used for real-time, persistent, scalable storage. Ideal for web apps.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0 bg-blue-500/20 rounded-full p-2 mr-4">
+                                🖥️
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-100">Frontend / App</h4>
+                                <p class="text-sm text-slate-400 mt-1"><strong>HTML/JS (or React/Angular).</strong></p>
+                                <p class="text-sm text-slate-500 mt-1">Single Page Application (SPA) handling NFC logic, data display, and API calls.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 3: Database Schema -->
+        <section id="view-data" class="tab-content hidden">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-slate-100 mb-2">Phase 3: Firestore Schema Design</h2>
+                <p class="text-slate-400">The application uses a single collection named <code class="bg-slate-900/60 px-1 py-0.5 rounded text-sm font-mono text-pink-400">repairs</code>. Explore the document structure below by hovering over fields.</p>
+                <div class="mt-4 p-4 bg-blue-400/10 border border-blue-400/40 rounded">
+                    <p class="text-sm text-blue-100"><strong>Prototype note:</strong> A local mock database (<code class="font-mono text-xs">mock-db.js</code>) mirrors this schema so technicians can test the hub, register page, and customer kiosk end-to-end before wiring Firestore.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Visual Document Representation -->
+                <div class="lg:col-span-2 glass-panel-soft p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="font-mono text-sm text-slate-400">Collection: repairs / Document ID: {Auto-ID}</div>
+                        <div class="pill-subtle">JSON Structure</div>
+                    </div>
+                    
+                    <div class="bg-slate-900 rounded-lg p-6 font-mono text-sm shadow-inner overflow-x-auto">
+                        <div class="text-green-400">{</div>
+                        <div class="pl-4 space-y-2" id="schema-viewer">
+                            <!-- JS Generated Rows -->
+                        </div>
+                        <div class="text-green-400">}</div>
+                    </div>
+                </div>
+
+                <!-- Field Detail Panel -->
+                <div class="glass-panel-soft p-6">
+                    <h3 class="font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2">Field Definition</h3>
+                    <div id="field-detail" class="space-y-4">
+                        <div class="text-center py-10 text-slate-400">
+                            <span class="text-3xl block mb-2">🔍</span>
+                            Hover over a field in the code block to see its type and description.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 4: Workflow Simulator -->
+        <section id="view-workflow" class="tab-content hidden">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-slate-100 mb-2">Phase 4: Application Workflow Simulator</h2>
+                <p class="text-slate-400">Experience the logic flow for the technician. Select a mode below to simulate the interaction steps described in the plan.</p>
+            </div>
+
+            <!-- Controller -->
+            <div class="flex justify-center space-x-4 mb-8">
+                <button onclick="startSimulation('checkin')" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow font-medium transition flex items-center">
+                    <span class="mr-2">📥</span> Simulate Check-In (Magstripe/NFC)
+                </button>
+                <button onclick="startSimulation('checkout')" class="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-full shadow font-medium transition flex items-center">
+                    <span class="mr-2">📤</span> Simulate Update/Check-Out
+                </button>
+            </div>
+
+            <!-- Simulation Area -->
+            <div id="sim-container" class="glass-panel-soft rounded-xl shadow-lg border border-slate-800 max-w-2xl mx-auto overflow-hidden min-h-[400px] relative hidden">
+                <!-- Phone Frame/Header -->
+                <div class="bg-slate-800 text-white px-4 py-3 flex justify-between items-center">
+                    <span class="font-mono text-sm">Tech Repair App v1.0</span>
+                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                </div>
+
+                <!-- Screen Content -->
+                <div class="p-6 relative h-full">
+                    
+                    <!-- IDLE STATE -->
+                    <div id="sim-step-idle" class="simulation-step active text-center py-12">
+                        <div class="text-6xl mb-4 opacity-20">📱</div>
+                        <h3 class="text-xl font-bold text-slate-100">Ready to Scan</h3>
+                        <p class="text-slate-400 mt-2">Waiting for NFC interaction...</p>
+                    </div>
+
+                    <!-- LOADING STATE -->
+                    <div id="sim-step-scanning" class="simulation-step text-center py-12">
+                        <div class="animate-pulse text-6xl mb-4 text-blue-400">📡</div>
+                        <h3 class="text-xl font-bold text-slate-100">Reading NFC Tag...</h3>
+                        <p class="text-slate-400 mt-2">UID: <span class="font-mono bg-slate-900/60 px-2 rounded">04:A1:B2:C3</span></p>
+                    </div>
+
+                    <!-- CHECK IN FORM -->
+                    <div id="sim-step-form" class="simulation-step">
+                        <div class="flex items-center text-green-300 mb-4 bg-green-500/10 p-2 rounded">
+                            <span class="font-bold mr-2">✓</span> New Tag Detected
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-100 mb-4">Log New Repair</h3>
+                        <div class="space-y-3">
+                            <div class="h-8 bg-slate-900/60 rounded w-full border border-slate-800 flex items-center px-3 text-slate-500 text-sm">Customer Name...</div>
+                            <div class="h-8 bg-slate-900/60 rounded w-full border border-slate-800 flex items-center px-3 text-slate-500 text-sm">Device Model...</div>
+                            <div class="h-20 bg-slate-900/60 rounded w-full border border-slate-800 p-2 text-slate-500 text-sm">Issue Description...</div>
+                            <button onclick="simAction('save-new')" class="w-full btn-primary text-center py-2 rounded-full font-medium mt-2">Save Ticket</button>
+                        </div>
+                    </div>
+
+                    <!-- UPDATE DETAILS -->
+                    <div id="sim-step-details" class="simulation-step">
+                        <div class="flex items-center text-blue-300 mb-4 bg-blue-500/10 p-2 rounded">
+                            <span class="font-bold mr-2">ℹ️</span> Existing Record Found
+                        </div>
+                        <div class="border-b border-slate-800 pb-2 mb-2">
+                            <div class="text-xs text-slate-500 uppercase">Customer</div>
+                            <div class="font-bold text-slate-100">John Doe</div>
+                        </div>
+                        <div class="border-b border-slate-800 pb-2 mb-2">
+                            <div class="text-xs text-slate-500 uppercase">Device</div>
+                            <div class="font-bold text-slate-100">iPhone 13 Pro - Cracked Screen</div>
+                        </div>
+                        <div class="mb-4">
+                            <div class="text-xs text-slate-500 uppercase mb-1">Status</div>
+                            <select class="w-full field-input p-1 text-sm">
+                                <option>Checked-In</option>
+                                <option>In Progress</option>
+                                <option>Ready for Pickup</option>
+                                <option>Completed</option>
+                            </select>
+                        </div>
+                        <button onclick="simAction('update')" class="w-full bg-teal-600 hover:bg-teal-500 text-white py-2 rounded-full font-medium">Update Status</button>
+                    </div>
+
+                    <!-- SUCCESS STATE -->
+                    <div id="sim-step-success" class="simulation-step text-center py-12">
+                        <div class="text-6xl mb-4 text-green-400">✅</div>
+                        <h3 class="text-xl font-bold text-slate-100">Saved to Firestore!</h3>
+                        <p class="text-slate-400 mt-2">Database updated successfully.</p>
+                        <button onclick="resetSim()" class="mt-6 text-blue-400 hover:underline text-sm">Start Over</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="sim-explanation" class="text-center mt-4 text-slate-500 text-sm italic">
+                Select a simulation mode above to begin.
+            </div>
+        </section>
+
+        <!-- Tab 5: Roadmap -->
+        <section id="view-roadmap" class="tab-content hidden">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-slate-100 mb-2">Phase 5: Implementation Roadmap</h2>
+                <p class="text-slate-400">A structured 5-step plan to bring the system online. The chart below estimates the complexity/effort required for each phase.</p>
+            </div>
+
+            <div class="glass-panel-soft p-6">
+                <!-- Chart Container (Responsive constraint) -->
+                <div class="chart-container">
+                    <canvas id="roadmapChart"></canvas>
+                </div>
+            </div>
+
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+                <div class="glass-panel-soft p-3 rounded border border-slate-800">
+                    <div class="font-bold text-slate-100 mb-1">1. Setup</div>
+                    <div class="text-slate-400">Init Firebase Project & Firestore.</div>
+                </div>
+                <div class="glass-panel-soft p-3 rounded border border-slate-800">
+                    <div class="font-bold text-slate-100 mb-1">2. Auth</div>
+                    <div class="text-slate-400">Secure app & identify technicians.</div>
+                </div>
+                <div class="glass-panel-soft p-3 rounded border border-slate-800">
+                    <div class="font-bold text-slate-100 mb-1">3. NFC Reader</div>
+                    <div class="text-slate-400">Integrate Web NFC API logic.</div>
+                </div>
+                <div class="glass-panel-soft p-3 rounded border border-slate-800">
+                    <div class="font-bold text-slate-100 mb-1">4. Check-In UI</div>
+                    <div class="text-slate-400">Build "New Job" forms & logic.</div>
+                </div>
+                <div class="glass-panel-soft p-3 rounded border border-slate-800">
+                    <div class="font-bold text-slate-100 mb-1">5. Update UI</div>
+                    <div class="text-slate-400">Build status management UI.</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-slate-800 py-6 mt-auto">
+        <div class="app-shell px-4 text-center text-sm text-slate-500">
+            NFC Repair Log System Proposal • Generated based on Source Report
+        </div>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        // --- DATA & STATE ---
+        const tabs = [
+            { id: 'view-architecture', label: '1. Architecture' },
+            { id: 'view-specs', label: '2. Specifications' },
+            { id: 'view-data', label: '3. Data Schema' },
+            { id: 'view-workflow', label: '4. Workflow Logic' },
+            { id: 'view-roadmap', label: '5. Roadmap' }
+        ];
+
+        const schemaFields = [
+            { key: 'nfcId', type: 'String', desc: 'MANDATORY. Unique ID from NFC card. Primary Index.', mandatory: true },
+            { key: 'customerName', type: 'String', desc: 'Name of person dropping off phone.', mandatory: false },
+            { key: 'model', type: 'String', desc: 'Make and model (e.g., iPhone 15).', mandatory: false },
+            { key: 'issue', type: 'String', desc: 'Description of fault.', mandatory: false },
+            { key: 'costEstimate', type: 'Number', desc: 'Price quoted for repair.', mandatory: false },
+            { key: 'amountPaid', type: 'Number', desc: 'Deposit or upfront payment collected during intake.', mandatory: false },
+            { key: 'balanceDue', type: 'Number', desc: 'Computed amount remaining (cost - amountPaid).', mandatory: false },
+            { key: 'status', type: 'String', desc: 'Current state (e.g., Checked-In, Completed).', mandatory: false },
+            { key: 'dateIn', type: 'Timestamp', desc: 'Date logged.', mandatory: false },
+            { key: 'dateModified', type: 'Timestamp', desc: 'Last update time.', mandatory: false },
+            { key: 'technicianNotes', type: 'String', desc: 'Internal notes.', mandatory: false },
+            { key: 'userId', type: 'String', desc: 'ID of logged-in technician (Security).', mandatory: true },
+        ];
+
+        const archDetails = {
+            'hardware': {
+                title: 'NFC Hardware Component',
+                content: 'Uses passive NFC tags (NTAG213/215) containing a read-only Unique ID (UID). Reading is performed by a mobile device (Web NFC) or USB desktop reader.'
+            },
+            'frontend': {
+                title: 'Web Application (SPA)',
+                content: 'The "Brain" of the operation. Built with HTML/React/Angular. Current build includes login, hub, register, customer kiosk, orders overview, and technician tools. Handles both NFC taps and magstripe UID input before syncing with the backend.'
+            },
+            'database': {
+                title: 'Cloud Firestore',
+                content: 'NoSQL Database holding the "repairs" collection. Indexed by the NFC UID for instant lookups. During development, a local mock DB mirrors the schema so flows can be tested 100% offline.'
+            }
+        };
+
+        // --- DOM ELEMENTS ---
+        const navContainer = document.getElementById('nav-tabs');
+        const schemaViewer = document.getElementById('schema-viewer');
+        const fieldDetail = document.getElementById('field-detail');
+        const archContent = document.getElementById('arch-detail-content');
+        const simContainer = document.getElementById('sim-container');
+        const simExplanation = document.getElementById('sim-explanation');
+
+        // --- INITIALIZATION ---
+        function init() {
+            renderTabs();
+            renderSchema();
+            renderRoadmapChart();
+            switchTab('view-architecture'); // Default
+        }
+
+        // --- NAVIGATION LOGIC ---
+        function renderTabs() {
+            navContainer.innerHTML = tabs.map(tab => `
+                <button 
+                    onclick="switchTab('${tab.id}')"
+                    class="tab-btn px-1 py-4 text-sm font-medium text-slate-500 hover:text-slate-700 whitespace-nowrap transition-colors border-b-2 border-transparent"
+                    id="btn-${tab.id}"
+                >
+                    ${tab.label}
+                </button>
+            `).join('');
+        }
+
+        function switchTab(tabId) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active', 'border-blue-500', 'text-blue-600'));
+
+            // Show selected
+            document.getElementById(tabId).classList.remove('hidden');
+            const btn = document.getElementById(`btn-${tabId}`);
+            if(btn) btn.classList.add('active', 'border-blue-500', 'text-blue-600');
+        }
+
+        // --- ARCHITECTURE INTERACTION ---
+        function showArchDetail(key) {
+            const data = archDetails[key];
+            archContent.innerHTML = `
+                <div class="animate-fade-in">
+                    <h4 class="text-xl font-bold text-slate-100 mb-2">${data.title}</h4>
+                    <p class="text-slate-400">${data.content}</p>
+                </div>
+            `;
+        }
+
+        // --- SCHEMA INTERACTION ---
+        function renderSchema() {
+            schemaViewer.innerHTML = schemaFields.map(field => `
+                <div 
+                    class="hover:bg-slate-800 p-1 rounded cursor-help transition-colors group"
+                    onmouseenter="showFieldDetail('${field.key}')"
+                >
+                    <span class="text-blue-400">"${field.key}"</span>: 
+                    <span class="text-yellow-300">${field.type}</span>${field.mandatory ? '<span class="text-pink-500 ml-2 text-xs font-bold">*</span>' : ''},
+                </div>
+            `).join('');
+        }
+
+        function showFieldDetail(key) {
+            const field = schemaFields.find(f => f.key === key);
+            fieldDetail.innerHTML = `
+                <div class="bg-slate-900/40 p-4 rounded border border-slate-800">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-mono font-bold text-lg text-blue-300">${field.key}</span>
+                        <span class="text-xs font-bold px-2 py-1 rounded ${field.mandatory ? 'bg-pink-500/20 text-pink-200' : 'bg-slate-800 text-slate-400'}">
+                            ${field.mandatory ? 'REQUIRED' : 'OPTIONAL'}
+                        </span>
+                    </div>
+                    <div class="mb-2 text-sm text-slate-400 font-mono">Type: ${field.type}</div>
+                    <p class="text-slate-300">${field.desc}</p>
+                </div>
+            `;
+        }
+
+        // --- WORKFLOW SIMULATOR ---
+        function startSimulation(mode) {
+            simContainer.classList.remove('hidden');
+            simExplanation.classList.add('hidden');
+            simContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Reset steps
+            document.querySelectorAll('.simulation-step').forEach(el => el.classList.remove('active'));
+            
+            // Step 1: Idle
+            document.getElementById('sim-step-idle').classList.add('active');
+
+            // Auto proceed to scanning after 1s
+            setTimeout(() => {
+                document.querySelectorAll('.simulation-step').forEach(el => el.classList.remove('active'));
+                document.getElementById('sim-step-scanning').classList.add('active');
+                
+                // Simulate "Reading" delay
+                setTimeout(() => {
+                    document.querySelectorAll('.simulation-step').forEach(el => el.classList.remove('active'));
+                    if(mode === 'checkin') {
+                        document.getElementById('sim-step-form').classList.add('active');
+                    } else {
+                        document.getElementById('sim-step-details').classList.add('active');
+                    }
+                }, 1500);
+            }, 1000);
+        }
+
+        function simAction(action) {
+            // Show success
+            document.querySelectorAll('.simulation-step').forEach(el => el.classList.remove('active'));
+            document.getElementById('sim-step-success').classList.add('active');
+        }
+
+        function resetSim() {
+            simContainer.classList.add('hidden');
+            simExplanation.classList.remove('hidden');
+        }
+
+        // --- ROADMAP CHART ---
+        function renderRoadmapChart() {
+            const ctx = document.getElementById('roadmapChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['1. Setup', '2. Auth', '3. NFC Reader', '4. Check-In UI', '5. Update UI'],
+                    datasets: [{
+                        label: 'Estimated Complexity / Effort',
+                        data: [2, 3, 5, 4, 3], // 1-5 Scale estimated based on task description
+                        backgroundColor: [
+                            'rgba(203, 213, 225, 0.8)',
+                            'rgba(203, 213, 225, 0.8)',
+                            'rgba(59, 130, 246, 0.8)', // Highlight hardest part
+                            'rgba(203, 213, 225, 0.8)',
+                            'rgba(203, 213, 225, 0.8)'
+                        ],
+                        borderRadius: 4,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y', // Horizontal Bar
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 6,
+                            title: { display: true, text: 'Complexity Scale (1-5)' }
+                        },
+                        y: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const notes = [
+                                        "Init Firebase & Firestore",
+                                        "Implement Auth & Security Rules",
+                                        "Hardware Integration (Web NFC API)",
+                                        "Form Logic & 'Already Exists' Check",
+                                        "Data Retrieval & Status Updates"
+                                    ];
+                                    return `Goal: ${notes[context.dataIndex]}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Run
+        init();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="public/assets/styles.css">
+    <!-- Firebase App (core) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyBy9GDhhKPoeUBWdBH2Q4mYv4yI2MB3_E0",
+          authDomain: "nfc-kedai-kuning.firebaseapp.com",
+          projectId: "nfc-kedai-kuning",
+          storageBucket: "nfc-kedai-kuning.firebasestorage.app",
+          messagingSenderId: "851920514046",
+          appId: "1:851920514046:web:244a89c766231635b26eaf",
+          measurementId: "G-0G9EJQR8SF"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+</head>
+<body class="min-h-screen text-slate-100">
+    <header class="bg-transparent border-b border-slate-800/60 shadow-sm">
+        <div class="app-shell px-6 py-6 flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500">Phase 5 · Ops Overview</p>
+                <h1 class="text-2xl font-bold">Orders Overview</h1>
+            </div>
+            <a href="index.html" class="text-sm text-sky-400 font-semibold hover:underline">Back to Hub</a>
+        </div>
+    </header>
+
+    <main class="app-shell px-6 py-8 grid kanban-board md:grid-cols-4" id="board">
+        <!-- Populated via JS -->
+    </main>
+
+    <!-- Edit modal -->
+    <div id="editModal" class="modal-backdrop">
+        <div class="modal-panel fade-in">
+            <div class="modal-header flex items-center justify-between">
+                <div>
+                    <p class="field-label">Edit ticket</p>
+                    <p id="modalTitle" class="text-sm text-slate-200 mt-1">UID</p>
+                </div>
+                <button id="closeModalBtn" class="btn-ghost text-xs">Close</button>
+            </div>
+            <div class="modal-body space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="field-label">UID</span>
+                    <span id="modalUid" class="badge-uid">—</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="field-label block mb-1" for="modalCustomer">Customer</label>
+                        <input id="modalCustomer" class="field-input w-full" placeholder="Name">
+                    </div>
+                    <div>
+                        <label class="field-label block mb-1" for="modalModel">Device</label>
+                        <input id="modalModel" class="field-input w-full" placeholder="Model">
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label block mb-1" for="modalIssue">Issue</label>
+                    <textarea id="modalIssue" rows="3" class="field-input w-full" placeholder="Issue description"></textarea>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="field-label block mb-1" for="modalQuote">Quote</label>
+                        <input id="modalQuote" type="number" class="field-input w-full" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="field-label block mb-1" for="modalDeposit">Paid</label>
+                        <input id="modalDeposit" type="number" class="field-input w-full" placeholder="0">
+                    </div>
+                    <div class="flex flex-col justify-end">
+                        <span class="field-label mb-1">Balance</span>
+                        <span id="modalBalance" class="pill-subtle">$0.00</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="field-label block mb-1" for="modalNotes">Technician Notes</label>
+                    <textarea id="modalNotes" rows="3" class="field-input w-full" placeholder="Internal notes"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer flex items-center justify-between">
+                <span id="modalStatusChip" class="status-chip status-chip-pending">Pending</span>
+                <div class="flex gap-2">
+                    <button id="cancelModalBtn" class="btn-ghost">Cancel</button>
+                    <button id="saveModalBtn" class="btn-primary">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const board = document.getElementById('board');
+        const columns = [
+            { title: 'Pending / New', note: 'Awaiting intake', statuses: ['Pending', 'Checked-In'] },
+            { title: 'In Progress', note: 'Actively being repaired', statuses: ['In Progress'] },
+            { title: 'Ready for Pickup', note: 'Awaiting customer pickup', statuses: ['Ready for Pickup'] },
+            { title: 'Completed', note: 'Closed jobs', statuses: ['Completed'] }
+        ];
+
+        function formatCurrency(value) {
+            return (Number(value) || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+        }
+
+        function statusChipClass(status) {
+            switch (status) {
+                case 'In Progress': return 'status-chip status-chip-progress';
+                case 'Ready for Pickup': return 'status-chip status-chip-ready';
+                case 'Completed': return 'status-chip status-chip-completed';
+                default: return 'status-chip status-chip-pending';
+            }
+        }
+
+        function renderColumn(column, records) {
+            const items = records.length
+                ? records.map(record => `
+                    <li class="kanban-card p-3" draggable="true" data-uid="${record.nfcId || ''}" data-status="${record.status || ''}">
+                        <div class="flex items-center justify-between mb-1">
+                            <p class="text-[11px] uppercase text-slate-400 font-semibold">UID ${record.nfcId || '—'}</p>
+                            <span class="${statusChipClass(record.status)}">${record.status || 'Pending'}</span>
+                        </div>
+                        <p class="font-semibold text-slate-100 text-sm">${record.customerName || 'Walk-in'} · ${record.model || 'Device'}</p>
+                        <p class="text-[11px] text-slate-400 mt-1">${record.issue || 'No issue provided'}</p>
+                        <div class="flex justify-between text-[11px] text-slate-400 mt-3">
+                            <span>Quote: ${formatCurrency(record.costEstimate)}</span>
+                            <span>Due: ${formatCurrency(record.balanceDue ?? Math.max((record.costEstimate||0) - (record.amountPaid||0), 0))}</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mt-2">Updated: ${new Date(record.lastUpdated || Date.now()).toLocaleString()}</p>
+                    </li>
+                `).join('')
+                : `<li class="border border-dashed border-slate-700/60 rounded-lg p-4 text-xs text-slate-500 text-center">No records yet</li>`;
+
+            return `
+                <section class="kanban-column p-4 flex flex-col" data-column="${column.statuses[0]}">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-sm font-semibold text-slate-100">${column.title}</h2>
+                        <span class="text-[11px] text-slate-500">${column.note}</span>
+                    </div>
+                    <ul class="space-y-3 text-sm text-slate-100 flex-1 min-h-[40px]">${items}</ul>
+                </section>
+            `;
+        }
+
+        // REPLACE mockDb logic with Firestore
+        async function getAllRepairs() {
+            const snapshot = await db.collection('repairs').get();
+            return snapshot.docs.map(doc => doc.data());
+        }
+
+        async function renderBoard() {
+            let records = [];
+            try {
+                records = await getAllRepairs();
+            } catch (e) {
+                board.innerHTML = `<div class='text-center text-rose-400'>❌ Error loading tickets: ${e.message}</div>`;
+                return;
+            }
+            const normalized = records.map(r => ({
+                ...r,
+                status: (r.status || '').trim()
+            }));
+            board.innerHTML = columns.map(column => {
+                const matches = normalized.filter(r => column.statuses.includes(r.status));
+                return renderColumn(column, matches);
+            }).join('');
+            attachInteractions();
+        }
+
+        // Update ticket (edit modal or drag-drop status)
+        async function updateRepair(uid, updateObj) {
+            try {
+                await db.collection('repairs').doc(uid).set(updateObj, {merge:true});
+            } catch (e) {
+                alert('Error saving to Firestore: ' + e.message);
+            }
+        }
+
+        // Drag & drop + modal
+        let dragUid = null;
+        let currentRecord = null;
+
+        const modal = document.getElementById('editModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
+        const saveModalBtn = document.getElementById('saveModalBtn');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalUid = document.getElementById('modalUid');
+        const modalCustomer = document.getElementById('modalCustomer');
+        const modalModel = document.getElementById('modalModel');
+        const modalIssue = document.getElementById('modalIssue');
+        const modalQuote = document.getElementById('modalQuote');
+        const modalDeposit = document.getElementById('modalDeposit');
+        const modalBalance = document.getElementById('modalBalance');
+        const modalNotes = document.getElementById('modalNotes');
+        const modalStatusChip = document.getElementById('modalStatusChip');
+
+        function openModal(record) {
+            currentRecord = record;
+            modal.classList.add('open');
+            modalTitle.textContent = `${record.customerName || 'Ticket'} · ${record.model || ''}`.trim();
+            modalUid.textContent = record.nfcId || '—';
+            modalCustomer.value = record.customerName || '';
+            modalModel.value = record.model || '';
+            modalIssue.value = record.issue || '';
+            modalQuote.value = record.costEstimate || '';
+            modalDeposit.value = record.amountPaid || '';
+            modalNotes.value = record.technicianNotes || '';
+            modalStatusChip.textContent = record.status || 'Pending';
+            modalStatusChip.className = statusChipClass(record.status);
+            updateModalBalance();
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+            currentRecord = null;
+        }
+
+        function updateModalBalance() {
+            const q = Number(modalQuote.value) || 0;
+            const d = Number(modalDeposit.value) || 0;
+            const due = Math.max(q - d, 0);
+            modalBalance.textContent = formatCurrency(due);
+        }
+
+        function saveModal() {
+            if(!currentRecord) return;
+            const updated = {
+                ...currentRecord,
+                customerName: modalCustomer.value || currentRecord.customerName,
+                model: modalModel.value || currentRecord.model,
+                issue: modalIssue.value || currentRecord.issue,
+                costEstimate: Number(modalQuote.value) || 0,
+                amountPaid: Number(modalDeposit.value) || 0,
+                technicianNotes: modalNotes.value || currentRecord.technicianNotes
+            };
+            updated.balanceDue = Math.max(updated.costEstimate - updated.amountPaid, 0);
+            updateRepair(modalUid.textContent, updated);
+            closeModal();
+            renderBoard();
+        }
+
+        function attachInteractions() {
+            document.querySelectorAll('.kanban-card').forEach(card => {
+                const uid = card.getAttribute('data-uid');
+                card.addEventListener('click', async () => {
+                    if(!uid) return;
+                    const doc = await db.collection('repairs').doc(uid).get();
+                    if(!doc.exists) return;
+                    openModal(doc.data());
+                });
+                card.addEventListener('dragstart', (e) => {
+                    dragUid = uid;
+                    card.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                card.addEventListener('dragend', () => {
+                    dragUid = null;
+                    card.classList.remove('dragging');
+                });
+            });
+            document.querySelectorAll('.kanban-column').forEach(col => {
+                const targetStatus = col.getAttribute('data-column');
+                col.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    col.classList.add('drag-over');
+                });
+                col.addEventListener('dragleave', () => {
+                    col.classList.remove('drag-over');
+                });
+                col.addEventListener('drop', async () => {
+                    col.classList.remove('drag-over');
+                    if(!dragUid) return;
+                    await updateRepair(dragUid, {status: targetStatus});
+                    renderBoard();
+                });
+            });
+        }
+
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelModalBtn.addEventListener('click', closeModal);
+        saveModalBtn.addEventListener('click', saveModal);
+        modalQuote.addEventListener('input', updateModalBalance);
+        modalDeposit.addEventListener('input', updateModalBalance);
+
+        window.addEventListener('keydown', (e) => {
+            if(e.key === 'Escape') closeModal();
+        });
+
+        window.addEventListener('storage', renderBoard);
+        setInterval(renderBoard, 4000);
+        renderBoard();
+    </script>
+</body>
+</html>
+

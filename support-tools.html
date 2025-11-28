@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technician Toolkit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="public/assets/styles.css">
+    <!-- Firebase App & Firestore ready for future tools -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBy9GDhhKPoeUBWdBH2Q4mYv4yI2MB3_E0",
+      authDomain: "nfc-kedai-kuning.firebaseapp.com",
+      projectId: "nfc-kedai-kuning",
+      storageBucket: "nfc-kedai-kuning.firebasestorage.app",
+      messagingSenderId: "851920514046",
+      appId: "1:851920514046:web:244a89c766231635b26eaf",
+      measurementId: "G-0G9EJQR8SF"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    </script>
+</head>
+<body class="min-h-screen text-slate-100">
+    <header class="bg-transparent border-b border-slate-800/60 shadow-sm">
+        <div class="app-shell px-6 py-6 flex items-center justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wide text-slate-500">Utilities</p>
+                <h1 class="text-2xl font-bold text-slate-100">Technician Toolkit</h1>
+            </div>
+            <a href="index.html" class="text-sm text-sky-400 font-semibold hover:underline">Back to Hub</a>
+        </div>
+    </header>
+
+    <main class="app-shell px-6 py-10 grid gap-6 md:grid-cols-2">
+        <div class="glass-panel-soft p-6">
+            <h2 class="text-lg font-semibold">Reassign NFC Card</h2>
+            <p class="text-sm text-slate-400 mt-1">Release a card UID and link to another ticket (e.g., lost or damaged cards).</p>
+            <button class="mt-4 w-full btn-primary">Open Tool (Coming Soon)</button>
+        </div>
+        <div class="glass-panel-soft p-6">
+            <h2 class="text-lg font-semibold">Print Intake Slip</h2>
+            <p class="text-sm text-slate-400 mt-1">Generate printable PDF with UID, customer, and diagnostic info.</p>
+            <button class="mt-4 w-full btn-primary">Generate Slip (Coming Soon)</button>
+        </div>
+        <div class="glass-panel-soft p-6">
+            <h2 class="text-lg font-semibold">Audit Log Review</h2>
+            <p class="text-sm text-slate-400 mt-1">See who updated which ticket and when, leveraging Firestore security rules.</p>
+            <button class="mt-4 w-full btn-primary">View Logs (Coming Soon)</button>
+        </div>
+        <div class="glass-panel-soft p-6">
+            <h2 class="text-lg font-semibold">Technician Directory</h2>
+            <p class="text-sm text-slate-400 mt-1">Roster + roles to align with auth plan.</p>
+            <button class="mt-4 w-full btn-primary">Open Directory (Coming Soon)</button>
+        </div>
+    </main>
+</body>
+</html>
+
