@@ -175,9 +175,6 @@
                 registerStatus.textContent = `Saving to server ...`;
                 const record = collectFormData(parsed);
                 try {
-                    // Ensure user is authenticated before we write
-                    const current = NFCAUTH.getCurrentUser ? NFCAUTH.getCurrentUser() : null;
-                    if(!current) throw new Error('Not authenticated: please sign in to save tickets.');
                     await db.collection('repairs').doc(parsed).set(record, {merge:true});
                     registerStatus.textContent = `UID ${parsed} captured. Ticket stored in Firestore.`;
                 } catch (e) {
