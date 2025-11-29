@@ -183,6 +183,8 @@
         // Update ticket (edit modal or drag-drop status)
         async function updateRepair(uid, updateObj) {
             try {
+                const current = (typeof NFCAUTH !== 'undefined' && NFCAUTH.getCurrentUser) ? NFCAUTH.getCurrentUser() : null;
+                if(!current) throw new Error('Not authenticated: only technicians may update tickets.');
                 await db.collection('repairs').doc(uid).set(updateObj, {merge:true});
             } catch (e) {
                 alert('Error saving to Firestore: ' + e.message);

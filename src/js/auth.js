@@ -8,7 +8,7 @@
 (function(global){
   const NFCAUTH = {};
   let _inited = false;
-  const LOCAL_DEV_ACCOUNT = { email: 'guwberry@gmail.com', password: 'repair123' };
+  const LOCAL_DEV_ACCOUNT = { email: 'admin@nfcked.local', password: 'repair123' };
 
   NFCAUTH.init = function(firebaseConfig) {
     try {
@@ -63,12 +63,33 @@
 
   // Guard: call on protected pages
   NFCAUTH.requireAuth = function(redirectTo) {
-    NFCAUTH.onAuthStateChanged(user => {
+    // Hide page content while auth is being checked to avoid flicker/access
+    try {
+      document.documentElement.style.visibility = 'hidden';
+    } catch (e) {/* ignore */}
+
+    let resolved = false;
+    const finish = (user) => {
+      if(resolved) return;
+      resolved = true;
       if(!user) {
-        // Not logged in
-        window.location = redirectTo || 'login.html';
+        // Not logged in: replace location (avoid adding to history)
+        window.location.replace(redirectTo || 'login.html');
+      } else {
+        try { document.documentElement.style.visibility = ''; } catch (e) { /* ignore */ }
       }
-      // else: allow page load
+    };
+
+    // Check synchronous fallback first
+    const immediate = NFCAUTH.getCurrentUser();
+    if(immediate) {
+      finish(immediate);
+      return;
+    }
+
+    // Otherwise wait for auth state change
+    NFCAUTH.onAuthStateChanged((user) => {
+      finish(user);
     });
   };
 

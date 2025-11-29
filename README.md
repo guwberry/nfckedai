@@ -1,3 +1,18 @@
+Testing auth locally
+--------------------
+If you're seeing pages accessible while you think you're not logged in, try the following to confirm authentication behavior:
+
+- Open an incognito/private window; this ensures no existing sessions are present.
+- Open `login.html` and sign in as the admin to test flows.
+- To test unauthorized access, clear session storage and cookies in your browser, then visit `index.html` — it should redirect to `login.html`.
+
+To clear session storage in the browser console:
+
+```javascript
+sessionStorage.clear();
+localStorage.removeItem('nfcAuthUser');
+```
+
 NFC Repair Log — Quick Start: Authentication
 ===========================================
 
