@@ -667,7 +667,6 @@
     </script>
     <script src="src/js/auth.js"></script>
     <script>
-        // apply auth guard for admin pages
         const cfg = (typeof firebaseConfig !== 'undefined') ? firebaseConfig : {};
         NFCAUTH.init(cfg);
         NFCAUTH.requireAuth('login.html');

@@ -24,9 +24,12 @@
     </script>
     <script src="src/js/auth.js"></script>
     <script>
+        // Initialize the auth wrapper and toggle UI
         NFCAUTH.init(firebaseConfig);
-        NFCAUTH.requireAuth('login.html');
         NFCAUTH.autoWireUi();
+        // Require auth for the hub
+        NFCAUTH.requireAuth('login.html');
+        // Show logged-in state
         NFCAUTH.onAuthStateChanged(user => {
             const btnLogout = document.getElementById('btnLogout');
             const btnLoginLink = document.getElementById('btnLoginLink');

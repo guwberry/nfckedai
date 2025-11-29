@@ -10,7 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script>
-        const firebaseConfig = {
+    const firebaseConfig = {
       apiKey: "AIzaSyBy9GDhhKPoeUBWdBH2Q4mYv4yI2MB3_E0",
       authDomain: "nfc-kedai-kuning.firebaseapp.com",
       projectId: "nfc-kedai-kuning",
@@ -55,18 +55,16 @@
     </div>
 
     <script>
-        // Use NFCAUTH wrapper (Firebase compat or local fallback)
-        const form = document.getElementById('login-form');
-        const errorBox = document.getElementById('login-error');
-
-        // Initialize NFCAUTH wrapper (it tolerates missing Firebase SDK for local fallback)
+        // Use NFCAUTH (Firebase or local fallback)
         NFCAUTH.init(firebaseConfig);
         NFCAUTH.autoWireUi();
+
+        const form = document.getElementById('login-form');
+        const errorBox = document.getElementById('login-error');
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
             errorBox.classList.add('hidden');
-
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value.trim();
             try {
