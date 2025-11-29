@@ -8,7 +8,7 @@
 (function(global){
   const NFCAUTH = {};
   let _inited = false;
-  const LOCAL_DEV_ACCOUNT = { email: 'admin@nfcked.local', password: 'repair123' };
+  const LOCAL_DEV_ACCOUNT = { email: 'guwberry@gmail.com', password: 'repair123' };
 
   NFCAUTH.init = function(firebaseConfig) {
     try {
