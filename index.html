@@ -22,6 +22,23 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     </script>
+    <script src="src/js/auth.js"></script>
+    <script>
+        NFCAUTH.init(firebaseConfig);
+        NFCAUTH.requireAuth('login.html');
+        NFCAUTH.autoWireUi();
+        NFCAUTH.onAuthStateChanged(user => {
+            const btnLogout = document.getElementById('btnLogout');
+            const btnLoginLink = document.getElementById('btnLoginLink');
+            if(user) {
+                if(btnLogout) btnLogout.classList.remove('hidden');
+                if(btnLoginLink) btnLoginLink.classList.add('hidden');
+            } else {
+                if(btnLogout) btnLogout.classList.add('hidden');
+                if(btnLoginLink) btnLoginLink.classList.remove('hidden');
+            }
+        });
+    </script>
 </head>
 <body class="min-h-screen flex flex-col text-slate-100">
     <header class="bg-transparent border-b border-slate-800/60 shadow-sm">
@@ -31,9 +48,12 @@
                 <h1 class="text-2xl font-bold mt-2">NFC Repair Log Control Room</h1>
                 <p class="text-slate-400 mt-1 text-sm">Shortcut launcher for every workflow</p>
             </div>
-            <a href="login.html" class="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-slate-900 text-white rounded-full shadow hover:bg-slate-800 transition">
-                Technician Login
-            </a>
+            <div class="mt-4 sm:mt-0 inline-flex items-center gap-2">
+                <a href="login.html" id="btnLoginLink" class="inline-flex items-center px-4 py-2 bg-slate-900 text-white rounded-full shadow hover:bg-slate-800 transition">
+                    Technician Login
+                </a>
+                <button id="btnLogout" class="inline-flex items-center justify-center px-4 py-2 bg-rose-700 text-white rounded-full shadow hover:bg-rose-600 transition hidden">Sign Out</button>
+            </div>
         </div>
     </header>
 

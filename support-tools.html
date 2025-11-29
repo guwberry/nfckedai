@@ -22,6 +22,11 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     </script>
+    <script src="src/js/auth.js"></script>
+    <script>
+        NFCAUTH.init(firebaseConfig);
+        NFCAUTH.requireAuth('login.html');
+    </script>
 </head>
 <body class="min-h-screen text-slate-100">
     <header class="bg-transparent border-b border-slate-800/60 shadow-sm">
